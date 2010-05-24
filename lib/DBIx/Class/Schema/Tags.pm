@@ -4,6 +4,8 @@ use parent 'DBIx::Class::Schema';
 
 use aliased 'DBIx::Class::ResultSource::Table';
 
+use Class::MOP;
+
 sub setup_tags {
     my ($class, $args) = @_;
     my %sources = map { ($_ => $class->source($_)) } $class->sources;
@@ -18,11 +20,21 @@ sub setup_tags {
 sub setup_tags_for_source {
     my ($class, $source_name, $source, $tag) = @_;
 
-    my $tags_name = sprintf 'tags_%s_%s', $source->{name}, $tag->{rel};
-    my $tags = Table->new({ name => $tags_name });
+    my $tags_class = exists $tag->{class}
+        ? $tag->{class}
+        : join q{::} => $source->result_class, 'Tags';
 
-    $tags->add_columns(
-        (@{ $tag->{columns} || [] }),
+    my $tags_m_class = exists $tag->{m_class}
+        ? $tag->{m_class}
+        : join q{::} => $source->result_class, 'MTags';
+
+    Class::MOP::Class->create(
+        $_,
+        superclasses => ['DBIx::Class::Core'],
+    ) for $tags_class, $tags_m_class;
+
+    $tags_class->table( join q{_} => $source->name, $tag->{rel} );
+    $tags_class->add_columns(
         id => {
             data_type         => 'integer',
             is_nullable       => 0,
@@ -34,18 +46,21 @@ sub setup_tags_for_source {
         },
     );
 
-    $tags->set_primary_key('id');
-    $tags->add_unique_constraint(['name']);
+    $tags_class->set_primary_key('id');
+    $tags_class->add_unique_constraint(['name']);
 
-    my $tags_m_name = sprintf 'tags_%s_to_%s', $source->{name}, $tag->{rel};
-    my $tags_m = Table->new({ name => $tags_m_name });
+    $tags_class->has_many(
+        join(q{_} => 'm', $tag->{rel}) => $tags_m_class,
+        { 'foreign.tag' => 'self.id' },
+    );
 
-    $tags_m->add_columns(
+    $tags_m_class->table( join q{_} => $source->name, 'm', $tag->{rel} );
+    $tags_m_class->add_columns(
         tag => {
             data_type         => 'integer',
             is_nullable       => 0,
-            is_auto_increment => 0,
             is_foreign_key    => 1,
+            is_auto_increment => 0,
         },
         (map {
             ($_ => {
@@ -53,35 +68,19 @@ sub setup_tags_for_source {
                 is_foreign_key    => 1,
                 is_auto_increment => 0,
             })
-        } $source->primary_columns),
+        } $source->primary_columns)
     );
 
-    $tags_m->set_primary_key(qw(tag));
+    $tags_m_class->belongs_to(tag => $tags_class);
+    $tags_m_class->belongs_to($source->name, $source->result_class, {
+        'foreign.id' => 'self.id', # FIXME
+    });
 
-    $tags_m->add_relationship(
-        tag => $tags_name,
-        { 'foreign.id' => 'me.tag' },
-        { accessor => 'single', is_foreign_key_constraint => 1 },
-    );
+    $tags_class->result_source_instance->source_name('Tags');
+    $tags_m_class->result_source_instance->source_name('MTags');
 
-    $tags_m->add_relationship(
-        $tag->{thingy} => $source_name,
-        { 'foreign.id' => 'me.id' },
-        { accessor => 'single', is_foreign_key_constraint => 1 },
-    );
-
-    $source->add_relationship(
-        $tag->{rel} => $tags_m_name,
-        { },
-        { },
-    );
-
-    use Data::Dump 'pp';
-    pp $source;
-
-    $class->register_source($tags_name => $tags);
-    $class->register_source($tags_m_name => $tags_m);
-    $class->register_source($source_name => $source);
+    $class->register_source($tags_class => $tags_class->result_source_instance);
+    $class->register_source($tags_m_class => $tags_m_class->result_source_instance);
 
     ();
 }

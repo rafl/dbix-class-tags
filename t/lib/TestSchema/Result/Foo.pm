@@ -23,8 +23,7 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key('id');
 
 __PACKAGE__->setup_tags({
-    rel    => 'labels',
-    thingy => 'foo',
+    rel => 'labels',
 });
 
 1;

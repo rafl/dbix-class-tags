@@ -18,6 +18,7 @@ my $foo = $foos->create({
     foo => 42,
 });
 
-$foo->create_related(labels => { });
+$foo->add_to_labels({ name => 'bar' });
+$foo->add_to_labels({ name => 'baz' });
 
 done_testing;
