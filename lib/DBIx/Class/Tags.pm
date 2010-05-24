@@ -24,7 +24,7 @@ sub setup_tags {
         my $m_rel = join q{_} => 'm', $tag->{rel};
         $class->has_many(
             $m_rel => $tags_m_class,
-            { 'foreign.id' => 'self.id' },
+            { 'foreign.l_id' => 'self.id' }, # FIXME
         );
 
         $class->many_to_many(
