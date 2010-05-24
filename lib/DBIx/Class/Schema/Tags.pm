@@ -55,6 +55,15 @@ sub setup_tags_for_source {
     );
 
     $tags_m_class->table( join q{_} => $source->name, 'm', $tag->{rel} );
+
+    my @l_pk = $source->primary_columns;
+    my %ml_pk = map {
+        ("l_${_}" => {
+            %{ $source->column_info($_) || {} },
+            is_foreign_key    => 1,
+            is_auto_increment => 0,
+        })
+    } @l_pk;
     $tags_m_class->add_columns(
         'r_id' => {
             data_type         => 'integer',
@@ -62,31 +71,26 @@ sub setup_tags_for_source {
             is_foreign_key    => 1,
             is_auto_increment => 0,
         },
-        (map {
-            ("l_${_}" => {
-                %{ $source->column_info($_) || {} },
-                is_foreign_key    => 1,
-                is_auto_increment => 0,
-            })
-        } $source->primary_columns)
+        %ml_pk,
     );
 
-    $tags_m_class->set_primary_key('r_id', 'l_id'); # FIXME
+    $tags_m_class->set_primary_key('r_id', keys %ml_pk);
 
     $tags_m_class->belongs_to(
         tag => $tags_class,
         { 'foreign.id' => 'self.r_id' },
     );
 
-    $tags_m_class->belongs_to($source->name, $source->result_class, {
-        'foreign.id' => 'self.l_id', # FIXME
-    });
+    $tags_m_class->belongs_to(
+        $source->name => $source->result_class,
+        { map { ("foreign.${_}" => "self.l_${_}") } @l_pk },
+    );
 
     $tags_class->result_source_instance->source_name('Tags');
     $tags_m_class->result_source_instance->source_name('MTags');
 
-    $class->register_source($tags_class => $tags_class->result_source_instance);
-    $class->register_source($tags_m_class => $tags_m_class->result_source_instance);
+    $class->register_source($_ => $_->result_source_instance)
+        for $tags_class, $tags_m_class;
 
     ();
 }

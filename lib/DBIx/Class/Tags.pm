@@ -22,9 +22,11 @@ sub setup_tags {
             : join q{::} => $class, 'MTags';
 
         my $m_rel = join q{_} => 'm', $tag->{rel};
+
+        my @pk = $class->primary_columns;
         $class->has_many(
             $m_rel => $tags_m_class,
-            { 'foreign.l_id' => 'self.id' }, # FIXME
+            { map { ("foreign.l_${_}" => "self.${_}") } @pk },
         );
 
         $class->many_to_many(
