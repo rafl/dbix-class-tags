@@ -13,13 +13,17 @@ sub setup_tags {
     $class->_tags_data($args);
 
     for my $tag (@{ $args }) {
+        my $moniker = exists $tag->{moniker}
+            ? $tag->{moniker}
+            : 'Tags';
+
         my $tags_class = exists $tag->{class}
             ? $tag->{class}
-            : join q{::} => $class, 'Tags';
+            : join q{::} => $class, $moniker;
 
         my $tags_m_class = exists $tag->{m_class}
             ? $tag->{m_class}
-            : join q{::} => $class, 'MTags';
+            : join q{::} => $class, 'M', $moniker;
 
         my $m_rel = join q{_} => 'm', $tag->{rel};
 

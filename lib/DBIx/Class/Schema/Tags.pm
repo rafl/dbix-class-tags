@@ -20,13 +20,17 @@ sub setup_tags {
 sub setup_tags_for_source {
     my ($class, $source_name, $source, $tag) = @_;
 
+    my $moniker = exists $tag->{moniker}
+        ? $tag->{moniker}
+        : 'Tags';
+
     my $tags_class = exists $tag->{class}
         ? $tag->{class}
-        : join q{::} => $source->result_class, 'Tags';
+        : join q{::} => $source->result_class, $moniker;
 
     my $tags_m_class = exists $tag->{m_class}
         ? $tag->{m_class}
-        : join q{::} => $source->result_class, 'MTags';
+        : join q{::} => $source->result_class, 'M', $moniker;
 
     Class::MOP::Class->create(
         $_,
@@ -49,9 +53,14 @@ sub setup_tags_for_source {
     $tags_class->set_primary_key('id');
     $tags_class->add_unique_constraint(['name']);
 
+    my $m_rel = join q{_} => 'm', $tag->{rel};
     $tags_class->has_many(
-        join(q{_} => 'm', $tag->{rel}) => $tags_m_class,
-        { 'foreign.tag' => 'self.id' },
+        $m_rel => $tags_m_class,
+        { 'foreign.r_id' => 'self.id' },
+    );
+
+    $tags_class->many_to_many(
+        $tag->{back_rel} => $m_rel, $source->name
     );
 
     $tags_m_class->table( join q{_} => $source->name, 'm', $tag->{rel} );
@@ -86,11 +95,14 @@ sub setup_tags_for_source {
         { map { ("foreign.${_}" => "self.l_${_}") } @l_pk },
     );
 
-    $tags_class->result_source_instance->source_name('Tags');
-    $tags_m_class->result_source_instance->source_name('MTags');
+    my $tags_moniker = join q{} => $source->source_name, $moniker;
+    $tags_class->result_source_instance->source_name($tags_moniker);
 
-    $class->register_source($_ => $_->result_source_instance)
-        for $tags_class, $tags_m_class;
+    my $tags_m_moniker = join q{} => $source->source_name, 'M', $moniker;
+    $tags_m_class->result_source_instance->source_name($tags_m_moniker);
+
+    $class->register_source($tags_moniker => $tags_class->result_source_instance);
+    $class->register_source($tags_m_moniker => $tags_m_class->result_source_instance);
 
     ();
 }
