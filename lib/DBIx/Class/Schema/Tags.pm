@@ -30,7 +30,7 @@ sub setup_tags_for_source {
 
     my $tags_m_class = exists $tag->{m_class}
         ? $tag->{m_class}
-        : join q{::} => $source->result_class, 'M', $moniker;
+        : join q{::} => $source->result_class, 'M' . $moniker;
 
     Class::MOP::Class->create(
         $_,
@@ -59,9 +59,8 @@ sub setup_tags_for_source {
         { 'foreign.r_id' => 'self.id' },
     );
 
-    $tags_class->many_to_many(
-        $tag->{back_rel} => $m_rel, $source->name
-    );
+    $tags_class->many_to_many($tag->{back_rel} => $m_rel, $source->name);
+
 
     $tags_m_class->table( join q{_} => $source->name, 'm', $tag->{rel} );
 
@@ -73,6 +72,7 @@ sub setup_tags_for_source {
             is_auto_increment => 0,
         })
     } @l_pk;
+
     $tags_m_class->add_columns(
         'r_id' => {
             data_type         => 'integer',
