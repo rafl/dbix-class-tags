@@ -16,6 +16,95 @@ __PACKAGE__->mk_classdata('tag_parser');
 
 __PACKAGE__->tag_parser(TagParser->new);
 
+=head1 SYNOPSIS
+
+    package MySchema;
+    __PACKAGE__->load_components(qw(Schema::Tags));
+    # regular schema setup goes here
+    __PACKAGE__->setup_tags;
+
+    package MySchema::Result::Foo;
+    __PACKAGE__->load_components(qw(Tags));
+    # regular result source setup goes here
+    __PACKAGE__->setup_tags([
+        rel      => 'labels',
+        back_rel => 'foos',
+        moniker  => 'Labels',
+    ]);
+
+    # later on, in the code using MySchema
+    $foo_row->add_to_labels('bar, baz, moo');
+    my @foos_labeled_bar = $schema->resultset('FooLabels')->find({ name => 'bar' })->foos;
+
+=head1 DESCRIPTION
+
+This module is intended to make adding tag-like data to your dbic
+results as easy as possible. It can provide a tags table as, a link
+table to your existing results, as well as helper methods for
+modifying tags.
+
+=method setup_tags (\@tag_specs | \%tag_spec)
+
+This method sets up tags for a result source. It takes either a tag
+specification, C<\%tag_spec>, or a list of tag specifications,
+C<\@tag_specs>.
+
+A tag specification is a hash reference of the following structure:
+
+=for :list
+* rel
+The name of the many_to_many relation to the tag table
+* back_rel
+The name of the many_to_many relation back from the tag table
+* moniker?
+The name that will be used to build the name of the generated result
+sources from. If unspecified, it defaults to C<Tags>.
+
+B<NOTE:> calling C<setup_tags> in your result source is not enough to
+set everything up. You will also need to
+L<DBIx::Class::Schema::Tags/setup_tags> in your schema using your
+result source.
+
+In addition to set up the required relations for your tags, this will
+also install helper methods to make modifying tags easy. These methods
+are:
+
+=begin :list
+
+* add_to_${rel}
+
+This is exactly like the C<add_to_${rel}> method provided by
+L<DBIx::Class::Relationship/many_to_many>, except you may additionally
+call it with with a string as its only argument. This string will be
+parsed using your result's C<tag_parser>, and each result of the
+parsing will be passed to the original C<add_to_${rel}> implementation
+as provided by L<DBIx::Class::Relationship/many_to_many>.
+
+* remove_from_${rel}
+
+This behaves just like the C<add_to_${rel}> method described above,
+but will call the C<remove_from_${rel}> method as provided by
+L<DBIx::Class::Relationship/many_to_many>.
+
+* set_${rel}
+
+This is exactly like the C<set_${rel}> method provided by
+L<DBIx::Class::Relationship/many_to_many>, except you may additionally
+call it with a string as its only argument. THis string will be parsed
+using your result's C<tag_parser>. The list of parse results will be
+passed to the original C<set_${rel}> from
+L<DBIx::CLass::Relationship/many_to_many>.
+
+=end :list
+
+=method tag_parser
+
+This method is called to retrieve the tag parser used to parse tag
+strings in the helper methods installed by C<setup_tags>. By default,
+an instance of L<DBIx::Class::Tags::TagParser> is returned.
+
+=cut
+
 sub setup_tags {
     my ($class, $args) = @_;
     $args = [$args] unless ref $args eq 'ARRAY';

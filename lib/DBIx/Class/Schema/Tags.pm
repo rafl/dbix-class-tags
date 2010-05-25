@@ -1,10 +1,34 @@
 package DBIx::Class::Schema::Tags;
+# ABSTRACT: Schema component for DBIx::Class::Tags
+
+use Class::MOP;
+use aliased 'DBIx::Class::ResultSource::Table';
 
 use parent 'DBIx::Class::Schema';
 
-use aliased 'DBIx::Class::ResultSource::Table';
+=head1 SYNOPSIS
 
-use Class::MOP;
+    package MySchema;
+    __PACKAGE__->load_components(qw(Schema::Tags));
+    # regular schema setup goes here
+    __PACKAGE__->setup_tags;
+
+=head1 DESCRIPTION
+
+This is a component for L<DBIx::Class::Schema>s, to support result
+sources using L<DBIx::Class::Tags>.
+
+=method setup_tags
+
+This method sets up the necessary result sources for the tags
+specified by other result sources using the L<DBIx::Class::Tags>
+component.
+
+In order for that to work, you will have to call C<setup_tags> after
+your regular result sources have already been loaded, usually after a
+call to C<load_namespaces> or C<load_classes>.
+
+=cut
 
 sub setup_tags {
     my ($class, $args) = @_;
