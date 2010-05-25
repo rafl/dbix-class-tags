@@ -67,7 +67,9 @@ sub setup_tags {
             @args = [$self->_tag_parser->parse($args[0])]
                 if @args == 1 && !ref $args[0];
 
-            return $self->$orig(@args);
+            return $self->result_source->schema->txn_do(sub {
+                $self->$orig(@args);
+            });
         });
 
         $meta->add_around_method_modifier("remove_from_${rel}" => sub {
