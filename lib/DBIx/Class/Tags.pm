@@ -5,6 +5,7 @@ package DBIx::Class::Tags;
 
 use Class::MOP;
 use Carp qw(confess);
+use Carp::Clan qw/^DBIx::Class/;
 use aliased 'DBIx::Class::Tags::TagParser';
 
 use parent 'DBIx::Class';
@@ -48,17 +49,42 @@ sub setup_tags {
         );
 
         my $meta = Class::MOP::Class->initialize($class);
-        $meta->add_around_method_modifier($_ => sub {
+
+        $meta->add_around_method_modifier("add_to_${rel}" => sub {
             my ($orig, $self, @args) = @_;
 
-            if (@args == 1 && !ref $args[0]) {
-                return $self->result_source->schema->txn_do(sub {
-                    $self->$orig($_) for $self->_tag_parser->parse($args[0]);
-                });
-            }
+            return $self->$orig(@args)
+                unless @args == 1 && !ref $args[0];
+
+            return $self->result_source->schema->txn_do(sub {
+                $self->$orig($_) for $self->_tag_parser->parse($args[0]);
+            });
+        });
+
+        $meta->add_around_method_modifier("set_${rel}" => sub {
+            my ($orig, $self, @args) = @_;
+
+            @args = [$self->_tag_parser->parse($args[0])]
+                if @args == 1 && !ref $args[0];
 
             return $self->$orig(@args);
-        }) for map { "${_}_${rel}" } qw(add_to remove_from set);
+        });
+
+        $meta->add_around_method_modifier("remove_from_${rel}" => sub {
+            my ($orig, $self, @args) = @_;
+
+            return $self->$orig(@args)
+                unless @args == 1 && !ref $args[0];
+
+            my $rs = $self->result_source->resultset;
+            my $tag_rs = $rs->search_related($m_rel)->search_related('tag');
+            my @tags = grep defined, map { $tag_rs->find($_) }
+                $self->_tag_parser->parse($args[0]);
+
+            return $self->result_source->schema->txn_do(sub {
+                $self->$orig($_) for @tags;
+            });
+        });
     }
 
     ();

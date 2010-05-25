@@ -46,4 +46,20 @@ is_deeply(
     [23, 42],
 );
 
+$foo->set_labels(' bar, moo, kooh ');
+$foo->discard_changes;
+
+is_deeply(
+    [sort map { $_->name } $foo->labels],
+    [qw(bar kooh moo)],
+);
+
+$foo->remove_from_labels(' moo, bar ');
+$foo->discard_changes;
+
+is_deeply(
+    [map { $_->name } $foo->labels],
+    ['kooh'],
+);
+
 done_testing;
