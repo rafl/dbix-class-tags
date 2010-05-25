@@ -13,11 +13,11 @@ sub setup_tags {
         my $source = $sources{$source_name};
         my @tags = @{ $source->result_class->_tags_data || [] };
         next unless @tags;
-        $class->setup_tags_for_source($source_name, $source, $_) for @tags;
+        $class->_setup_tags_for_source($source_name, $source, $_) for @tags;
     }
 }
 
-sub setup_tags_for_source {
+sub _setup_tags_for_source {
     my ($class, $source_name, $source, $tag) = @_;
 
     my $moniker = exists $tag->{moniker}
