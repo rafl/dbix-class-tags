@@ -1,0 +1,4 @@
+.*
+!.gitignore
+DBIx-Class-Tags-*
+Debian_CPANTS.txt
