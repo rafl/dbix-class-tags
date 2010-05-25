@@ -20,7 +20,7 @@ my $foo = $foos->create({
 
 is_deeply([$foo->labels], []);
 
-$foo->add_to_labels('bar,baz');
+$foo->add_to_labels(' bar, baz ');
 
 is_deeply(
     [sort map { $_->name } $foo->labels],
