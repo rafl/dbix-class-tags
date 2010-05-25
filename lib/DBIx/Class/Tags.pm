@@ -12,9 +12,9 @@ use aliased 'DBIx::Class::Tags::TagParser';
 use parent 'DBIx::Class';
 
 __PACKAGE__->mk_classdata(_tags_data => []);
-__PACKAGE__->mk_classdata('_tag_parser');
+__PACKAGE__->mk_classdata('tag_parser');
 
-__PACKAGE__->_tag_parser(TagParser->new);
+__PACKAGE__->tag_parser(TagParser->new);
 
 sub setup_tags {
     my ($class, $args) = @_;
@@ -58,14 +58,14 @@ sub setup_tags {
                 unless @args == 1 && !ref $args[0];
 
             return $self->result_source->schema->txn_do(sub {
-                $self->$orig($_) for $self->_tag_parser->parse($args[0]);
+                $self->$orig($_) for $self->tag_parser->parse($args[0]);
             });
         });
 
         $meta->add_around_method_modifier("set_${rel}" => sub {
             my ($orig, $self, @args) = @_;
 
-            @args = [$self->_tag_parser->parse($args[0])]
+            @args = [$self->tag_parser->parse($args[0])]
                 if @args == 1 && !ref $args[0];
 
             return $self->result_source->schema->txn_do(sub {
@@ -82,7 +82,7 @@ sub setup_tags {
             my $rs = $self->result_source->resultset;
             my $tag_rs = $rs->search_related($m_rel)->search_related('tag');
             my @tags = grep defined, map { $tag_rs->find($_) }
-                $self->_tag_parser->parse($args[0]);
+                $self->tag_parser->parse($args[0]);
 
             return $self->result_source->schema->txn_do(sub {
                 $self->$orig($_) for @tags;
