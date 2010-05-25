@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 package DBIx::Class::Tags;
+# ABSTRACT: A simple way of adding "tags" to your DBIx::Class rows
 
 use Class::MOP;
 use Carp qw(confess);
